@@ -11,7 +11,7 @@ def disassemble(hex_str: str, output_intel_syntax: bool = False) -> str:
         args.append("0x" + byte)
 
     syntax_id = 1 if output_intel_syntax else 0
-    cmd = "echo {} | llvm-mc -disassemble -output-asm-variant={}".format(
+    cmd = "echo {} | llvm-mc -disassemble -triple=x86_64 -output-asm-variant={}".format(
         " ".join(args),
         syntax_id,
     )
