@@ -193,6 +193,9 @@ cython_debug/
 # Ruff stuff:
 .ruff_cache/
 
+# Data files should be downloaded.
+data/*.parquet
+
 # PyPI configuration file
 .pypirc
 
