@@ -1,7 +1,6 @@
 import argparse
-import subprocess
 import csv
-import sys
+import subprocess
 from pathlib import Path
 
 from scipy.stats import kendalltau
@@ -122,7 +121,7 @@ if __name__ == "__main__":
 
     # Read input CSV
     rows = []
-    with open(input_path, "r") as f:
+    with open(input_path) as f:
         reader = csv.reader(f)
         for row in reader:
             if len(row) >= 2:
