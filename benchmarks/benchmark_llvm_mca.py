@@ -19,7 +19,7 @@ def disassemble(hex_str: str, output_intel_syntax: bool = False) -> list[str]:
         " ".join(args), syntax_id
     )
     output = subprocess.check_output(cmd, shell=True)
-    
+
     lines = []
     for line in output.decode("utf8").splitlines():
         line = line.strip()
@@ -80,18 +80,37 @@ def benchmark_block(hex_str: str, mcpu: str = "skylake", iterations: int = 100) 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Benchmark llvm-mca on BHive dataset")
-    parser.add_argument("--throughput-csv", type=str, required=True,
-                        help="Path to BHive throughput CSV (e.g., skl.csv)")
-    parser.add_argument("--output-csv", type=str, default=None,
-                        help="Path to output CSV (default: <input>_mca_results.csv)")
-    parser.add_argument("--mcpu", type=str, default="skylake",
-                        help="Target CPU for llvm-mca (default: skylake)")
-    parser.add_argument("--iterations", type=int, default=100,
-                        help="Number of iterations for llvm-mca (default: 100)")
-    parser.add_argument("--limit", type=int, default=None,
-                        help="Limit number of rows to process (for testing)")
-    parser.add_argument("--split", type=str, choices=["train", "eval", "all"], default="all",
-                        help="Data split to use: 'train' (first 80%%), 'eval' (last 20%%), or 'all' (default)")
+    parser.add_argument(
+        "--throughput-csv",
+        type=str,
+        required=True,
+        help="Path to BHive throughput CSV (e.g., skl.csv)",
+    )
+    parser.add_argument(
+        "--output-csv",
+        type=str,
+        default=None,
+        help="Path to output CSV (default: <input>_mca_results.csv)",
+    )
+    parser.add_argument(
+        "--mcpu", type=str, default="skylake", help="Target CPU for llvm-mca (default: skylake)"
+    )
+    parser.add_argument(
+        "--iterations",
+        type=int,
+        default=100,
+        help="Number of iterations for llvm-mca (default: 100)",
+    )
+    parser.add_argument(
+        "--limit", type=int, default=None, help="Limit number of rows to process (for testing)"
+    )
+    parser.add_argument(
+        "--split",
+        type=str,
+        choices=["train", "eval", "all"],
+        default="all",
+        help="Data split to use: 'train' (first 80%%), 'eval' (last 20%%), or 'all' (default)",
+    )
 
     args = parser.parse_args()
 
@@ -161,15 +180,16 @@ if __name__ == "__main__":
     if results:
         ground_truths = [gt for _, gt, _ in results]
         predictions = [pred for _, _, pred in results]
-        
+
         abs_errors = [abs(gt - pred) for gt, pred in zip(ground_truths, predictions)]
-        rel_errors = [abs(gt - pred) / gt * 100 for gt, pred in zip(ground_truths, predictions) if gt > 0]
-        
+        rel_errors = [
+            abs(gt - pred) / gt * 100 for gt, pred in zip(ground_truths, predictions) if gt > 0
+        ]
+
         # Kendall's Tau measures rank correlation
         tau, p_value = kendalltau(ground_truths, predictions)
-        
+
         print(f"\nStatistics:")
         print(f"  Mean Absolute Error: {sum(abs_errors) / len(abs_errors):.2f} cycles")
         print(f"  Mean Relative Error: {sum(rel_errors) / len(rel_errors):.2f}%")
         print(f"  Kendall's Tau: {tau:.4f} (p-value: {p_value:.2e})")
-
