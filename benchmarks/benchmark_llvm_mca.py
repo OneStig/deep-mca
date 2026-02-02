@@ -189,7 +189,7 @@ if __name__ == "__main__":
         # Kendall's Tau measures rank correlation
         tau, p_value = kendalltau(ground_truths, predictions)
 
-        print(f"\nStatistics:")
+        print("\nStatistics:")
         print(f"  Mean Absolute Error: {sum(abs_errors) / len(abs_errors):.2f} cycles")
         print(f"  Mean Relative Error: {sum(rel_errors) / len(rel_errors):.2f}%")
         print(f"  Kendall's Tau: {tau:.4f} (p-value: {p_value:.2e})")
