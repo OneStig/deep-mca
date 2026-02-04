@@ -1,24 +1,48 @@
 # deep-mca
 
-# setup
-- Download `uv`, `llvm`
-- `uv sync`
-- `uv run scripts/check_env.py`
+ML-based x86-64 CPU throughput prediction using the Mamba architecture, trained on the [BHive](https://github.com/ithemal/bhive) benchmark dataset.
 
-# lint
-`./scripts/lint.sh`
+## Setup
 
-# data
+Requires `uv` and LLVM tools (`llvm-mc`, `llvm-mca`, `llvm-objdump`).
 
-https://huggingface.co/datasets/stevenhe04/x86-bb-24m
+```bash
+uv sync
+uv run scripts/check_env.py  # verify environment
+```
 
-# useful links
-remove this later
+On CUDA machines, install optimized Mamba kernels for faster training:
 
-https://github.com/state-spaces/mamba
+```bash
+uv sync --group cuda
+```
 
-https://arxiv.org/pdf/1808.07412
+Without the CUDA group, training still works using HuggingFace's pure-PyTorch Mamba fallback.
 
-https://dl.acm.org/doi/pdf/10.1145/3640537.3641572
+## Fine-tuning
 
-https://ieeexplore.ieee.org/document/9042166
+```bash
+uv run deep-mca-finetune --config configs/finetune.yaml
+```
+
+Trains a Mamba model with a regression head on BHive Skylake throughput data. Logs training loss, eval MAE, MAPE, and Kendall's tau to [wandb](https://wandb.ai). Run `wandb login` first to enable dashboard logging.
+
+Edit `configs/finetune.yaml` to adjust model size, learning rate, epochs, etc.
+
+## Lint
+
+```bash
+./scripts/lint.sh
+```
+
+## Data
+
+- BHive (git submodule): `data/bhive/benchmark/throughput/skl.csv`
+- Pretraining corpus: [stevenhe04/x86-bb-24m](https://huggingface.co/datasets/stevenhe04/x86-bb-24m)
+
+## References
+
+- [Mamba: Linear-Time Sequence Modeling with Selective State Spaces](https://github.com/state-spaces/mamba)
+- [Ithemal: Accurate, Portable and Fast Basic Block Throughput Estimation](https://arxiv.org/pdf/1808.07412)
+- [BHive: A Benchmark Suite and Measurement Framework](https://dl.acm.org/doi/pdf/10.1145/3640537.3641572)
+- [Learning to Optimize Tensor Programs](https://ieeexplore.ieee.org/document/9042166)

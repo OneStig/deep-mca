@@ -7,13 +7,18 @@ requires-python = ">=3.12"
 dependencies = [
     "datasets>=4.5.0",
     "polars>=1.37.1",
+    "pyyaml>=6.0",
     "scipy>=1.11.0",
     "tokenizers>=0.22.2",
     "torch>=2.10.0",
     "tqdm>=4.67.1",
     "transformers>=4.57.6",
     "typer>=0.21.1",
+    "wandb>=0.17.0",
 ]
+
+[project.scripts]
+deep-mca-finetune = "deep_mca.finetune:main"
 
 [build-system]
 requires = ["setuptools>=68", "wheel"]
@@ -40,4 +45,8 @@ dev = [
     "pytest>=9.0.2",
     "ruff>=0.14.13",
     "seaborn>=0.13.2",
+]
+cuda = [
+    "causal-conv1d @ git+https://github.com/Dao-AILab/causal-conv1d.git",
+    "mamba-ssm @ git+https://github.com/state-spaces/mamba.git",
 ]
