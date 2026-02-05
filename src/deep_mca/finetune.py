@@ -27,7 +27,7 @@ def build_scheduler(
     warmup_steps: int,
     total_steps: int,
 ) -> torch.optim.lr_scheduler.LambdaLR:
-    """Linear warmup then cosine decay to 0."""
+    """Linear warmup then cosine decay to 0"""
 
     def lr_lambda(step: int) -> float:
         if step < warmup_steps:
@@ -80,7 +80,7 @@ def evaluate(
     return {
         "eval/loss": total_loss / n,
         "eval/mae": total_mae / n,
-        "eval/mape": total_mape / n * 100,  # percentage
+        "eval/mape": total_mape / n * 100,
         "eval/kendall_tau": tau,
     }
 
@@ -240,7 +240,7 @@ def train(config: dict) -> None:
             torch.save(model.state_dict(), ckpt_path)
             print(f"  Saved best model to {ckpt_path}")
 
-    # Save final model
+    # Save final model (although almost certainly this will be overfit over best_model)
     torch.save(model.state_dict(), checkpoint_dir / "final_model.pt")
     print(f"Training complete. Best eval loss: {best_eval_loss:.4f}")
 
@@ -249,7 +249,7 @@ def train(config: dict) -> None:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Fine-tune MambaRegressor on BHive")
+    parser = argparse.ArgumentParser()
     parser.add_argument("--config", type=str, required=True, help="Path to YAML config file")
     args = parser.parse_args()
 

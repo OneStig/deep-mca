@@ -6,22 +6,25 @@ import torch
 from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import Dataset
 
-# Special tokens
+# TODO: Replace this
+# Using a very naive tokenization scheme for now so we can train for now.
+# PAD is just to make tensor rectangular, always start with BOS and end with EOS.
 PAD_ID = 0
 BOS_ID = 1
 EOS_ID = 2
-BYTE_OFFSET = 3  # byte 0x00 → token 3, ..., 0xFF → token 258
-VOCAB_SIZE = 256 + BYTE_OFFSET  # 259
+BYTE_OFFSET = 3
+VOCAB_SIZE = 256 + BYTE_OFFSET
 
 
 def hex_to_tokens(hex_str: str) -> list[int]:
     """Convert a hex string to a list of token IDs with BOS/EOS."""
+    # remove once we have proper tokenization
     byte_vals = bytes.fromhex(hex_str)
     return [BOS_ID] + [b + BYTE_OFFSET for b in byte_vals] + [EOS_ID]
 
 
 class BHiveDataset(Dataset):
-    """Dataset for BHive throughput data with hex-byte tokenization."""
+    """Dataset for bhive throughput data with naive tokenization."""
 
     def __init__(
         self,
@@ -46,6 +49,7 @@ class BHiveDataset(Dataset):
                 samples.append((hex_str, throughput))
 
         # Deterministic shuffle and split
+        # TODO: Later we should just use canonical split? @henry
         gen = torch.Generator().manual_seed(seed)
         indices = torch.randperm(len(samples), generator=gen).tolist()
         split_idx = int(len(indices) * train_ratio)
