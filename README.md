@@ -1,33 +1,27 @@
 # deep-mca
 
-ML-based x86-64 CPU throughput prediction using the Mamba architecture, trained on the [BHive](https://github.com/ithemal/bhive) benchmark dataset.
 
 ## Setup
 
-Requires `uv` and LLVM tools (`llvm-mc`, `llvm-mca`, `llvm-objdump`).
+Requires `uv` and LLVM tools.
 
 ```bash
 uv sync
-uv run scripts/check_env.py  # verify environment
+uv run scripts/check_env.py
 ```
 
-On CUDA machines, install optimized Mamba kernels for faster training:
+If available install mamba-ssm CUDA kernels for speeeeeed.
 
 ```bash
 uv sync --group cuda
 ```
 
-Without the CUDA group, training still works using HuggingFace's pure-PyTorch Mamba fallback.
 
-## Fine-tuning
+## Finetuning
 
 ```bash
 uv run deep-mca-finetune --config configs/finetune.yaml
 ```
-
-Trains a Mamba model with a regression head on BHive Skylake throughput data. Logs training loss, eval MAE, MAPE, and Kendall's tau to [wandb](https://wandb.ai). Run `wandb login` first to enable dashboard logging.
-
-Edit `configs/finetune.yaml` to adjust model size, learning rate, epochs, etc.
 
 ## Lint
 
@@ -37,7 +31,6 @@ Edit `configs/finetune.yaml` to adjust model size, learning rate, epochs, etc.
 
 ## Data
 
-- BHive (git submodule): `data/bhive/benchmark/throughput/skl.csv`
 - Pretraining corpus: [stevenhe04/x86-bb-24m](https://huggingface.co/datasets/stevenhe04/x86-bb-24m)
 
 ## References
