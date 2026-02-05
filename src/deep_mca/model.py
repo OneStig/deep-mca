@@ -15,6 +15,7 @@ class MambaRegressor(nn.Module):
         hidden_size: int = 256,
         num_layers: int = 4,
         state_size: int = 16,
+        dropout: float = 0.0,
     ):
         super().__init__()
         config = MambaConfig(
@@ -25,6 +26,7 @@ class MambaRegressor(nn.Module):
             pad_token_id=PAD_ID,
         )
         self.backbone = MambaModel(config)
+        self.dropout = nn.Dropout(dropout) if dropout > 0 else nn.Identity()
         self.head = nn.Linear(hidden_size, 1)
 
     def forward(self, input_ids: torch.Tensor, lengths: torch.Tensor) -> torch.Tensor:
@@ -44,7 +46,7 @@ class MambaRegressor(nn.Module):
         last_idx = last_idx.expand(-1, -1, hidden.size(-1))  # (batch, 1, hidden)
         pooled = hidden.gather(1, last_idx).squeeze(1)  # (batch, hidden)
 
-        return self.head(pooled).squeeze(-1)  # (batch,)
+        return self.head(self.dropout(pooled)).squeeze(-1)  # (batch,)
 
     @classmethod
     def from_pretrained_backbone(
@@ -53,12 +55,14 @@ class MambaRegressor(nn.Module):
         hidden_size: int = 256,
         num_layers: int = 4,
         state_size: int = 16,
+        dropout: float = 0.0,
     ) -> "MambaRegressor":
         """Load pretrained backbone weights, initialise regression head fresh."""
         model = cls(
             hidden_size=hidden_size,
             num_layers=num_layers,
             state_size=state_size,
+            dropout=dropout,
         )
         state_dict = torch.load(pretrained_path, map_location="cpu", weights_only=True)
         model.backbone.load_state_dict(state_dict, strict=False)

@@ -1,7 +1,7 @@
-"""Fine-tune a MambaRegressor on BHive throughput data.
+"""
+Performs fine tuning of the final model on throughput data.
 
-Usage:
-    uv run deep-mca-finetune --config configs/finetune.yaml
+uv run deep-mca-finetune --config configs/finetune.yaml
 """
 
 import argparse
@@ -101,6 +101,7 @@ def train(config: dict) -> None:
 
         run = wandb.init(
             project=cfg_wandb.get("project", "deep-mca"),
+            entity=cfg_wandb.get("entity"),
             name=cfg_wandb.get("name"),
             config=config,
         )
@@ -144,6 +145,7 @@ def train(config: dict) -> None:
 
     # -- model --
     pretrained_path = cfg_model.get("pretrained_path")
+    dropout = float(cfg_model.get("dropout", 0.0))
     if pretrained_path:
         print(f"Loading pretrained backbone from {pretrained_path}")
         model = MambaRegressor.from_pretrained_backbone(
@@ -151,12 +153,14 @@ def train(config: dict) -> None:
             hidden_size=cfg_model["hidden_size"],
             num_layers=cfg_model["num_layers"],
             state_size=cfg_model["state_size"],
+            dropout=dropout,
         )
     else:
         model = MambaRegressor(
             hidden_size=cfg_model["hidden_size"],
             num_layers=cfg_model["num_layers"],
             state_size=cfg_model["state_size"],
+            dropout=dropout,
         )
     model = model.to(device)
     param_count = sum(p.numel() for p in model.parameters())

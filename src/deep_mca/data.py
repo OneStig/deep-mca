@@ -55,7 +55,6 @@ class BHiveDataset(Dataset):
         else:
             selected = indices[split_idx:]
 
-        self.log_targets = log_targets
         self.items: list[tuple[list[int], float]] = []
         for i in selected:
             hex_str, throughput = samples[i]

@@ -2,6 +2,7 @@ model:
   hidden_size: 256
   num_layers: 24
   state_size: 16
+  dropout: 0.1
   pretrained_path: null
 
 data:
@@ -19,5 +20,6 @@ training:
   checkpoint_dir: checkpoints
 
 wandb:
-  project: deep-mca
-  name: stevenhe-team
+  project: deep-mca-finetune
+  entity: mamba-mca
+  name: null
