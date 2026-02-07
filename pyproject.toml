@@ -4,28 +4,35 @@ version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
+
 dependencies = [
     "datasets>=4.5.0",
     "polars>=1.37.1",
     "pyyaml>=6.0",
     "scipy>=1.11.0",
     "tokenizers>=0.22.2",
-    "torch>=2.10.0",
     "tqdm>=4.67.1",
     "transformers>=4.57.6",
     "typer>=0.21.1",
     "wandb>=0.17.0",
+
+    # Torch is declared normally.
+    # CUDA is installed manually via uv pip (outside the solver).
+    "torch>=2.5.1",
+    "torchvision>=0.20.1",
+    "torchaudio>=2.5.1",
 ]
 
 [project.scripts]
 deep-mca-finetune = "deep_mca.finetune:main"
+deep-mca-pretrain = "deep_mca.pretrain:main"
 
 [build-system]
 requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-package-dir = {"" = "src"}
+package-dir = { "" = "src" }
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -46,7 +53,7 @@ dev = [
     "ruff>=0.14.13",
     "seaborn>=0.13.2",
 ]
-cuda = [
-    "causal-conv1d @ git+https://github.com/Dao-AILab/causal-conv1d.git",
-    "mamba-ssm @ git+https://github.com/state-spaces/mamba.git",
-]
+
+# NOTE:
+# Do NOT include mamba-ssm or causal-conv1d on Windows.
+# They require nvcc and will fail to build.
