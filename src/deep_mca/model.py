@@ -26,8 +26,12 @@ class MambaRegressor(nn.Module):
             pad_token_id=PAD_ID,
         )
         self.backbone = MambaModel(config)
-        self.dropout = nn.Dropout(dropout) if dropout > 0 else nn.Identity()
-        self.head = nn.Linear(hidden_size, 1)
+        self.head = nn.Sequential(
+            nn.Linear(hidden_size, hidden_size // 4),
+            nn.GELU(),
+            nn.Dropout(dropout),
+            nn.Linear(hidden_size // 4, 1),
+        )
 
     def forward(self, input_ids: torch.Tensor, lengths: torch.Tensor) -> torch.Tensor:
         """
@@ -46,7 +50,7 @@ class MambaRegressor(nn.Module):
         last_idx = last_idx.expand(-1, -1, hidden.size(-1))  # (batch, 1, hidden)
         pooled = hidden.gather(1, last_idx).squeeze(1)  # (batch, hidden)
 
-        return self.head(self.dropout(pooled)).squeeze(-1)  # (batch,)
+        return self.head(pooled).squeeze(-1)  # (batch,)
 
     @classmethod
     def from_pretrained_backbone(

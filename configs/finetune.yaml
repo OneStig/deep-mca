@@ -11,8 +11,8 @@ data:
   train_ratio: 0.8
 
 training:
-  batch_size: 256
-  lr: 1e-3
+  batch_size: 64
+  lr: 5e-4
   weight_decay: 0.01
   epochs: 60
   warmup_ratio: 0.03
