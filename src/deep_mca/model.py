@@ -2,6 +2,7 @@ from pathlib import Path
 
 import torch
 import torch.nn as nn
+from safetensors.torch import load_file
 from transformers import MambaConfig, MambaModel
 
 from deep_mca.data import PAD_ID, VOCAB_SIZE
@@ -68,6 +69,6 @@ class MambaRegressor(nn.Module):
             state_size=state_size,
             dropout=dropout,
         )
-        state_dict = torch.load(pretrained_path, map_location="cpu", weights_only=True)
+        state_dict = load_file(pretrained_path)
         model.backbone.load_state_dict(state_dict, strict=False)
         return model

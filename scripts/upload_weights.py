@@ -10,6 +10,7 @@ from pathlib import Path
 
 import yaml
 from huggingface_hub import HfApi
+from safetensors.torch import load_file, save_file
 
 from deep_mca.data import VOCAB_SIZE
 
@@ -21,7 +22,7 @@ def main() -> None:
     parser.add_argument(
         "--checkpoint",
         type=Path,
-        default=Path("checkpoints/best_model.pt"),
+        default=Path("checkpoints/best_model.safetensors"),
     )
     parser.add_argument(
         "--config",
@@ -40,7 +41,8 @@ def main() -> None:
 
     tmp_dir = tempfile.mkdtemp()
     try:
-        shutil.copy2(args.checkpoint, Path(tmp_dir) / "model.pt")
+        state_dict = load_file(args.checkpoint)
+        save_file(state_dict, Path(tmp_dir) / "model.safetensors")
 
         config = {
             "hidden_size": model_cfg["hidden_size"],

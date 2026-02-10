@@ -10,6 +10,7 @@ from pathlib import Path
 
 import torch
 import yaml
+from safetensors.torch import save_file
 from scipy.stats import kendalltau
 from torch.utils.data import DataLoader
 
@@ -236,12 +237,12 @@ def train(config: dict) -> None:
 
         if eval_metrics["eval/loss"] < best_eval_loss:
             best_eval_loss = eval_metrics["eval/loss"]
-            ckpt_path = checkpoint_dir / "best_model.pt"
-            torch.save(model.state_dict(), ckpt_path)
+            ckpt_path = checkpoint_dir / "best_model.safetensors"
+            save_file(model.state_dict(), ckpt_path)
             print(f"  Saved best model to {ckpt_path}")
 
     # Save final model (although almost certainly this will be overfit over best_model)
-    torch.save(model.state_dict(), checkpoint_dir / "final_model.pt")
+    save_file(model.state_dict(), checkpoint_dir / "final_model.safetensors")
     print(f"Training complete. Best eval loss: {best_eval_loss:.4f}")
 
     if run:
