@@ -3,29 +3,8 @@ import csv
 import subprocess
 from pathlib import Path
 
+from datasets import load_dataset
 from scipy.stats import kendalltau
-
-
-def disassemble(hex_str: str, output_intel_syntax: bool = False) -> list[str]:
-    """Disassemble hex string to assembly lines."""
-    args = []
-    for i in range(0, len(hex_str), 2):
-        byte = hex_str[i : i + 2]
-        args.append("0x" + byte)
-
-    syntax_id = 1 if output_intel_syntax else 0
-    cmd = "echo {} | llvm-mc -disassemble -triple=x86_64 -output-asm-variant={}".format(
-        " ".join(args), syntax_id
-    )
-    output = subprocess.check_output(cmd, shell=True)
-
-    lines = []
-    for line in output.decode("utf8").splitlines():
-        line = line.strip()
-        if not line or line.startswith("."):
-            continue
-        lines.append(line)
-    return lines
 
 
 def wrap_asm(lines: list[str]) -> str:
@@ -62,12 +41,30 @@ def run_llvm_mca(asm: str, mcpu: str = "skylake", iterations: int = 100) -> floa
     return None
 
 
-def benchmark_block(hex_str: str, mcpu: str = "skylake", iterations: int = 100) -> float | None:
-    """Benchmark a single basic block and return predicted cycles."""
+def benchmark_block(
+    instructions: str | list[str],
+    mcpu: str = "skylake",
+    iterations: int = 100,
+) -> float | None:
+    """Benchmark a single basic block and return predicted cycles.
+
+    The `instructions` field comes from the Hugging Face dataset and can be either:
+    - a single string containing one instruction per line, or
+    - a list of instruction strings.
+    """
     try:
-        asm_lines = disassemble(hex_str)
+        if isinstance(instructions, str):
+            asm_lines = [
+                line.strip()
+                for line in instructions.splitlines()
+                if line.strip()
+            ]
+        else:
+            asm_lines = [line.strip() for line in instructions if line.strip()]
+
         if not asm_lines:
             return None
+
         asm = wrap_asm(asm_lines)
         rthroughput = run_llvm_mca(asm, mcpu=mcpu, iterations=iterations)
         if rthroughput is None:
@@ -78,21 +75,53 @@ def benchmark_block(hex_str: str, mcpu: str = "skylake", iterations: int = 100) 
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Benchmark llvm-mca on BHive dataset")
+    parser = argparse.ArgumentParser(
+        description=(
+            "Benchmark llvm-mca on a dataset of x86-64 basic blocks."
+        )
+    )
     parser.add_argument(
-        "--throughput-csv",
+        "--dataset-name",
         type=str,
         required=True,
-        help="Path to BHive throughput CSV (e.g., skl.csv)",
+        help=(
+            "Hugging Face dataset name or local parquet path. "
+            "The dataset must have 'instructions' and 'cycles' columns."
+        ),
     )
     parser.add_argument(
         "--output-csv",
         type=str,
         default=None,
-        help="Path to output CSV (default: <input>_mca_results.csv)",
+        help=(
+            "Path to output CSV (default: "
+            "<dataset_name>_<split>_mca_results.csv)"
+        ),
     )
     parser.add_argument(
-        "--mcpu", type=str, default="skylake", help="Target CPU for llvm-mca (default: skylake)"
+        "--split",
+        type=str,
+        default="train",
+        help=(
+            "Base dataset split to load from Hugging Face / parquet "
+            "(e.g., 'train', 'validation', 'test', 'train[:1000]', etc.)."
+        ),
+    )
+    parser.add_argument(
+        "--subset",
+        type=str,
+        choices=["all", "train", "eval"],
+        default="all",
+        help=(
+            "Logical subset to use within the loaded split: "
+            "'train' = first 80%, 'eval' = last 20%, 'all' = entire split."
+        ),
+    )
+    parser.add_argument(
+        "--mcpu",
+        type=str,
+        default="skylake",
+        help="Target CPU for llvm-mca (default: skylake)",
     )
     parser.add_argument(
         "--iterations",
@@ -100,92 +129,103 @@ if __name__ == "__main__":
         default=100,
         help="Number of iterations for llvm-mca (default: 100)",
     )
-    parser.add_argument(
-        "--limit", type=int, default=None, help="Limit number of rows to process (for testing)"
-    )
-    parser.add_argument(
-        "--split",
-        type=str,
-        choices=["train", "eval", "all"],
-        default="all",
-        help="Data split to use: 'train' (first 80%%), 'eval' (last 20%%), or 'all' (default)",
-    )
 
     args = parser.parse_args()
 
-    input_path = Path(args.throughput_csv)
+    # Determine output path
     if args.output_csv:
         output_path = Path(args.output_csv)
     else:
-        output_path = input_path.parent / f"{input_path.stem}_mca_results.csv"
+        # Sanitize dataset name for filename purposes
+        dataset_stem = args.dataset_name.replace("/", "_")
+        output_path = Path(f"{dataset_stem}_{args.split}_mca_results.csv")
 
-    # Read input CSV
-    rows = []
-    with open(input_path) as f:
-        reader = csv.reader(f)
-        for row in reader:
-            if len(row) >= 2:
-                hex_str = row[0].strip()
-                try:
-                    ground_truth = float(row[1])
-                except ValueError:
-                    continue
-                if hex_str:  # Skip empty hex strings
-                    rows.append((hex_str, ground_truth))
+    # Load dataset from Hugging Face (or local parquet)
+    try:
+        if args.dataset_name.endswith(".parquet"):
+            # Local parquet file
+            dataset = load_dataset(
+                "parquet", data_files=args.dataset_name, split=args.split
+            )
+        else:
+            # Hugging Face Hub dataset
+            dataset = load_dataset(args.dataset_name, split=args.split)
+    except Exception as e:
+        raise SystemExit(f"Failed to load dataset '{args.dataset_name}': {e}")
 
-    # Apply train/eval split
-    total_rows = len(rows)
-    if args.split == "train":
-        split_idx = int(total_rows * 0.8)
-        rows = rows[:split_idx]
-        print(f"Using TRAIN split: first {len(rows)} rows (80% of {total_rows})")
-    elif args.split == "eval":
-        split_idx = int(total_rows * 0.8)
-        rows = rows[split_idx:]
-        print(f"Using EVAL split: last {len(rows)} rows (20% of {total_rows})")
+    print(f"Loaded dataset '{args.dataset_name}' with split spec '{args.split}'.")
+    print(f"Total examples before subset: {len(dataset)}")
 
-    if args.limit:
-        rows = rows[: args.limit]
+    # Apply 80/20 train/eval subset if requested
+    total_examples = len(dataset)
+    if args.subset in {"train", "eval"} and total_examples > 0:
+        split_idx = int(total_examples * 0.8)
+        if args.subset == "train":
+            indices = list(range(0, split_idx))
+            print(
+                f"Using TRAIN subset: first {len(indices)} examples "
+                f"(80% of {total_examples})"
+            )
+        else:  # eval
+            indices = list(range(split_idx, total_examples))
+            print(
+                f"Using EVAL subset: last {len(indices)} examples "
+                f"(20% of {total_examples})"
+            )
+        dataset = dataset.select(indices)
 
-    print(f"Processing {len(rows)} basic blocks...")
+    print(f"Processing {len(dataset)} basic blocks...")
     print(f"Target CPU: {args.mcpu}")
     print(f"Output: {output_path}")
 
     # Benchmark each block and write results
-    results = []
+    results: list[tuple[str, float, float]] = []
     errors = 0
-    for i, (hex_str, ground_truth) in enumerate(rows):
-        predicted = benchmark_block(hex_str, mcpu=args.mcpu, iterations=args.iterations)
+    for i, row in enumerate(dataset):
+        instructions = row["instructions"]
+        ground_truth = float(row["cycles"])
+
+        predicted = benchmark_block(
+            instructions, mcpu=args.mcpu, iterations=args.iterations
+        )
         if predicted is not None:
-            results.append((hex_str, ground_truth, predicted))
+            # Store the raw instructions text for reproducibility
+            if isinstance(instructions, list):
+                instr_text = "\n".join(instructions)
+            else:
+                instr_text = str(instructions)
+
+            results.append((instr_text, ground_truth, predicted))
         else:
             errors += 1
 
         # Progress update
         if (i + 1) % 1000 == 0:
-            print(f"  Processed {i + 1}/{len(rows)} blocks ({errors} errors)")
+            print(f"  Processed {i + 1}/{len(dataset)} blocks ({errors} errors)")
 
     # Write output CSV (create parent directory if needed)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with open(output_path, "w", newline="") as f:
         writer = csv.writer(f)
-        writer.writerow(["hex", "ground_truth_cycles", "mca_predicted_cycles"])
+        writer.writerow(["instructions", "ground_truth_cycles", "mca_predicted_cycles"])
         writer.writerows(results)
 
     print(f"\nDone! Processed {len(results)} blocks successfully, {errors} errors.")
     print(f"Results saved to: {output_path}")
 
-    # Calculate and print basic statistics
+    # Calculate and print accuracy statistics
     if results:
         ground_truths = [gt for _, gt, _ in results]
         predictions = [pred for _, _, pred in results]
 
         abs_errors = [abs(gt - pred) for gt, pred in zip(ground_truths, predictions)]
         rel_errors = [
-            abs(gt - pred) / gt * 100 for gt, pred in zip(ground_truths, predictions) if gt > 0
+            abs(gt - pred) / gt * 100
+            for gt, pred in zip(ground_truths, predictions)
+            if gt > 0
         ]
 
-        # Kendall's Tau measures rank correlation
+        # Kendall's Tau calculation
         tau, p_value = kendalltau(ground_truths, predictions)
 
         print("\nStatistics:")
