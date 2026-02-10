@@ -1,7 +1,7 @@
-from pathlib import Path
 import json
 import math
 import re
+from pathlib import Path
 
 
 class TextAssemblyTokenizer:
@@ -46,7 +46,7 @@ class TextAssemblyTokenizer:
 
     def _load_vocab(self):
         """Load vocabs from JSON file."""
-        with open(TextAssemblyTokenizer.PATH, "r") as f:
+        with open(TextAssemblyTokenizer.PATH) as f:
             data = json.load(f)
         self.vocab = data["vocab"]
         self.reg_vocab = data["reg_vocab"]
