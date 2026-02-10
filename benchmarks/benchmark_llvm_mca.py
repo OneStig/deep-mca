@@ -54,11 +54,7 @@ def benchmark_block(
     """
     try:
         if isinstance(instructions, str):
-            asm_lines = [
-                line.strip()
-                for line in instructions.splitlines()
-                if line.strip()
-            ]
+            asm_lines = [line.strip() for line in instructions.splitlines() if line.strip()]
         else:
             asm_lines = [line.strip() for line in instructions if line.strip()]
 
@@ -76,9 +72,7 @@ def benchmark_block(
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description=(
-            "Benchmark llvm-mca on a dataset of x86-64 basic blocks."
-        )
+        description=("Benchmark llvm-mca on a dataset of x86-64 basic blocks.")
     )
     parser.add_argument(
         "--dataset-name",
@@ -93,10 +87,7 @@ if __name__ == "__main__":
         "--output-csv",
         type=str,
         default=None,
-        help=(
-            "Path to output CSV (default: "
-            "<dataset_name>_<split>_mca_results.csv)"
-        ),
+        help=("Path to output CSV (default: <dataset_name>_<split>_mca_results.csv)"),
     )
     parser.add_argument(
         "--split",
@@ -144,9 +135,7 @@ if __name__ == "__main__":
     try:
         if args.dataset_name.endswith(".parquet"):
             # Local parquet file
-            dataset = load_dataset(
-                "parquet", data_files=args.dataset_name, split=args.split
-            )
+            dataset = load_dataset("parquet", data_files=args.dataset_name, split=args.split)
         else:
             # Hugging Face Hub dataset
             dataset = load_dataset(args.dataset_name, split=args.split)
@@ -162,16 +151,10 @@ if __name__ == "__main__":
         split_idx = int(total_examples * 0.8)
         if args.subset == "train":
             indices = list(range(0, split_idx))
-            print(
-                f"Using TRAIN subset: first {len(indices)} examples "
-                f"(80% of {total_examples})"
-            )
+            print(f"Using TRAIN subset: first {len(indices)} examples (80% of {total_examples})")
         else:  # eval
             indices = list(range(split_idx, total_examples))
-            print(
-                f"Using EVAL subset: last {len(indices)} examples "
-                f"(20% of {total_examples})"
-            )
+            print(f"Using EVAL subset: last {len(indices)} examples (20% of {total_examples})")
         dataset = dataset.select(indices)
 
     print(f"Processing {len(dataset)} basic blocks...")
@@ -185,9 +168,7 @@ if __name__ == "__main__":
         instructions = row["instructions"]
         ground_truth = float(row["cycles"])
 
-        predicted = benchmark_block(
-            instructions, mcpu=args.mcpu, iterations=args.iterations
-        )
+        predicted = benchmark_block(instructions, mcpu=args.mcpu, iterations=args.iterations)
         if predicted is not None:
             # Store the raw instructions text for reproducibility
             if isinstance(instructions, list):
@@ -220,9 +201,7 @@ if __name__ == "__main__":
 
         abs_errors = [abs(gt - pred) for gt, pred in zip(ground_truths, predictions)]
         rel_errors = [
-            abs(gt - pred) / gt * 100
-            for gt, pred in zip(ground_truths, predictions)
-            if gt > 0
+            abs(gt - pred) / gt * 100 for gt, pred in zip(ground_truths, predictions) if gt > 0
         ]
 
         # Kendall's Tau calculation
