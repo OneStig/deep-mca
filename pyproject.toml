@@ -21,6 +21,7 @@ dependencies = [
 
 [project.scripts]
 deep-mca-finetune = "deep_mca.finetune:main"
+deep-mca-predict = "deep_mca.predict:main"
 
 [build-system]
 requires = ["setuptools>=68", "wheel"]
