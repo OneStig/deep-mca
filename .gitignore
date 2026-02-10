@@ -195,10 +195,6 @@ cython_debug/
 
 # Data files should be downloaded.
 data/*.parquet
-# Exception: track the converted x86 assembly datasets since they take a long time to convert.
-!data/skl_x86.parquet
-!data/hsw_x86.parquet
-!data/ivb_x86.parquet
 
 # PyPI configuration file
 .pypirc
