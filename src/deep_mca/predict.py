@@ -23,7 +23,7 @@ def predict(
     repo_id: str = "stevenhe04/deep-mca",
 ) -> float:
     model = _get_model(repo_id, arch)
-    
+
     # For now just input the hex, but once we finish tokenization
     # should just input assembly directly @teddy @huy
     tokens = hex_to_tokens(hex_str)

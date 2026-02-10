@@ -23,6 +23,5 @@ def test_predict_TEST_BLOCKS(hex_str: str, ground_truth: float):
     pred = predict(hex_str)
     relative_error = abs(pred - ground_truth) / ground_truth
     assert relative_error < ACCEPTABLE_ERROR, (
-        f"Predicted {pred:.2f}, expected: {ground_truth:.2f} "
-        f"(relative error {relative_error:.2%})"
+        f"Predicted {pred:.2f}, expected: {ground_truth:.2f} (relative error {relative_error:.2%})"
     )
