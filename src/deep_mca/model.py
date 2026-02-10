@@ -3,7 +3,7 @@ from pathlib import Path
 import torch
 import torch.nn as nn
 from safetensors.torch import load_file
-from transformers import MambaConfig, MambaModel
+from transformers import Mamba2Config, Mamba2Model
 
 from deep_mca.data import PAD_ID, VOCAB_SIZE
 
@@ -19,14 +19,21 @@ class MambaRegressor(nn.Module):
         dropout: float = 0.0,
     ):
         super().__init__()
-        config = MambaConfig(
+        expand = 2
+        intermediate_size = hidden_size * expand
+        head_dim = 64
+        num_heads = intermediate_size // head_dim
+        config = Mamba2Config(
             vocab_size=VOCAB_SIZE,
             hidden_size=hidden_size,
             num_hidden_layers=num_layers,
             state_size=state_size,
             pad_token_id=PAD_ID,
+            expand=expand,
+            head_dim=head_dim,
+            num_heads=num_heads,
         )
-        self.backbone = MambaModel(config)
+        self.backbone = Mamba2Model(config)
         self.head = nn.Sequential(
             nn.Linear(hidden_size, hidden_size // 4),
             nn.GELU(),
