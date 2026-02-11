@@ -1,6 +1,8 @@
-import subprocess
 import math
+import subprocess
+
 import torch
+
 
 def disassemble(hex_str: str, output_intel_syntax: bool = False) -> str:
     """
@@ -41,6 +43,7 @@ def wrap_asm(lines: list[str]) -> str:
 bb:
   {body}
 """
+
 
 def build_scheduler(
     optimizer: torch.optim.Optimizer,

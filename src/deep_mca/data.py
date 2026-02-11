@@ -22,7 +22,7 @@ def hex_to_tokens(hex_str: str) -> list[int]:
     byte_vals = bytes.fromhex(hex_str)
     return [BOS_ID] + [b + BYTE_OFFSET for b in byte_vals] + [EOS_ID]
 
-    
+
 class BHiveDataset(Dataset):
     """Dataset for bhive throughput data with naive tokenization."""
 
@@ -86,9 +86,10 @@ def collate_fn(
         "targets": torch.tensor(targets, dtype=torch.float32),
     }
 
+
 class CollateLM:
     """
-    Pad sequences and return input-ids, attention_mask, and labels (with pad positions masked as -100).
+    Pad sequences and return input-ids, attention_mask, and labels (with pads masked as -100).
     Drops sequences that failed disassembly.
     """
 
