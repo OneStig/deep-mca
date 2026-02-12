@@ -6,8 +6,6 @@ import pandas as pd
 
 
 def generate_vocab_pickle(file_pattern, output_file="vocab.pkl"):
-    # 1. Define Special & Structural Tokens (HARDCODED)
-    # These effectively "reserve" IDs 0 to ~30
     vocab = {
         # Standard Special
         "<PAD>": 0,
@@ -15,7 +13,7 @@ def generate_vocab_pickle(file_pattern, output_file="vocab.pkl"):
         "<BOS>": 2,
         "<EOS>": 3,
         "<SEP>": 4,
-        # Memory Structure (Required by your Parser)
+        # Memory Structure
         "MEM_OPEN": 5,
         "MEM_CLOSE": 6,
         "MEM_SEP": 7,
@@ -26,7 +24,7 @@ def generate_vocab_pickle(file_pattern, output_file="vocab.pkl"):
         # Segment Overrides
         "SEG_FS": 12,
         "SEG_GS": 13,
-        # Value Buckets (Required by Parser)
+        # Value Buckets
         "IMM_ZERO": 14,
         "IMM_ONE": 15,
         "IMM_S8": 16,
@@ -38,13 +36,13 @@ def generate_vocab_pickle(file_pattern, output_file="vocab.pkl"):
         "DISP_32": 22,
     }
 
-    next_id = 23  # Start auto-assigning after the hardcoded ones
+    next_id = 23 
     unique_tokens = set()
 
     files = glob.glob(file_pattern)
     print(f"Processing {len(files)} files...")
 
-    # Regex: Matches Opcodes and Registers (Same as before)
+    # Regex: Matches Opcodes and Registers
     token_pattern = re.compile(r"\b(%[a-z0-9]+|[a-z][a-z0-9]*)\b")
 
     for file_path in files:
@@ -62,7 +60,6 @@ def generate_vocab_pickle(file_pattern, output_file="vocab.pkl"):
     # Sort and assign IDs
     sorted_tokens = sorted(list(unique_tokens))
     for token in sorted_tokens:
-        # Avoid overwriting hardcoded tokens if they somehow appear in text
         if token not in vocab:
             vocab[token] = next_id
             next_id += 1
