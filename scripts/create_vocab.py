@@ -1,11 +1,11 @@
-import glob
 import pickle
 import re
 
-import pandas as pd
+from datasets import load_dataset
 
 
-def generate_vocab_pickle(file_pattern, output_file="vocab.pkl"):
+def generate_vocab_pickle(dataset_names, output_file="vocab.pkl"):
+    # 1. Define Special & Structural Tokens (Same as before)
     vocab = {
         # Standard Special
         "<PAD>": 0,
@@ -39,32 +39,35 @@ def generate_vocab_pickle(file_pattern, output_file="vocab.pkl"):
     next_id = 23
     unique_tokens = set()
 
-    files = glob.glob(file_pattern)
-    print(f"Processing {len(files)} files...")
-
     # Regex: Matches Opcodes and Registers
     token_pattern = re.compile(r"\b(%[a-z0-9]+|[a-z][a-z0-9]*)\b")
 
-    for file_path in files:
+    print(f"Processing {len(dataset_names)} datasets...")
+
+    for ds_name in dataset_names:
+        print(f"  Streaming {ds_name}...")
         try:
-            df = pd.read_parquet(file_path)
-            if "instructions" in df.columns:
-                for instruction in df["instructions"]:
-                    if isinstance(instruction, str):
-                        # Lowercase to ensure 'Mov' and 'mov' map to same ID
-                        matches = token_pattern.findall(instruction.lower())
-                        unique_tokens.update(matches)
+            ds = load_dataset(ds_name, split="train")
+
+            for row in ds:
+                instruction = row.get("instructions")
+                if isinstance(instruction, str):
+                    # Lowercase to ensure 'Mov' and 'mov' map to same ID
+                    matches = token_pattern.findall(instruction.lower())
+                    unique_tokens.update(matches)
+
         except Exception as e:
-            print(f"Error reading {file_path}: {e}")
+            print(f"Error reading {ds_name}: {e}")
 
     # Sort and assign IDs
+    print("Sorting and assigning IDs...")
     sorted_tokens = sorted(list(unique_tokens))
     for token in sorted_tokens:
         if token not in vocab:
             vocab[token] = next_id
             next_id += 1
 
-    # --- SAVE AS PICKLE ---
+    # Save as pickle
     with open(output_file, "wb") as f:
         pickle.dump(vocab, f)
 
@@ -72,5 +75,11 @@ def generate_vocab_pickle(file_pattern, output_file="vocab.pkl"):
 
 
 if __name__ == "__main__":
-    user_file_path = "/Users/teddydong/Documents/Winter 2026/CS 172b/assembly parquet/*.parquet"
-    generate_vocab_pickle(user_file_path, "vocab.pkl")
+    
+    DATASETS = [
+        "Arcticbun/hsw_x86",
+        "Arcticbun/ivb_x86",
+        "Arcticbun/skl_x86",
+    ]
+
+    generate_vocab_pickle(DATASETS, "data/vocab.pkl")
