@@ -189,9 +189,7 @@ def process_hf_datasets(
         # Column verification
         if hasattr(ds, "features") and text_column not in ds.features:
             features = list(ds.features.keys())
-            print(
-                f"Skipping {name}: Missing '{text_column}' column. Available: {features}"
-            )
+            print(f"Skipping {name}: Missing '{text_column}' column. Available: {features}")
             continue
 
         df = ds.to_pandas()  # may be huge
