@@ -7,7 +7,7 @@ data:
   dataset: stevenhe04/x86-bb-24m
   split: train
   field: hex
-  max_seq_len: 128
+  max_seq_len: 256
   
   #can toggle on/off to enable eval during pretraining 
   eval_split: null
@@ -17,7 +17,7 @@ training:
   batch_size: 8
   lr: 5e-4
   weight_decay: 0.01
-  max_steps: 9000
+  epochs: 5
   warmup_ratio: 0.1
   grad_clip: 1.0
   log_interval: 50

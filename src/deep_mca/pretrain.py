@@ -8,6 +8,7 @@ Usage:
 import argparse
 import math
 import random
+import wandb
 from pathlib import Path
 
 import torch
@@ -68,14 +69,9 @@ class HFHexMap(Dataset):
         asm = disassemble_hex(hex_str)
 
         # Normalize to list[str] of instruction lines
-        if not asm:
-            return torch.tensor([], dtype=torch.long)
+        asm_lines = [ln.strip() for ln in asm.splitlines() if ln.strip()]
 
-        if isinstance(asm, str):
-            asm_lines = [ln.strip() for ln in asm.splitlines() if ln.strip()]
-        elif isinstance(asm, list):
-            asm_lines = [str(ln).strip() for ln in asm if str(ln).strip()]
-        else:
+        if not asm_lines:
             return torch.tensor([], dtype=torch.long)
 
         # Tokenize assembly
@@ -130,20 +126,15 @@ def train(config: dict) -> None:
 
     set_seed(cfg_train["seed"])
 
-    # -- wandb --
-    run = None
-    try:
-        import wandb
+    # -- wandb --        
 
-        run = wandb.init(
-            project=cfg_wandb.get("project", "deep-mca-pretrain"),
-            entity=cfg_wandb.get("entity"),
-            name=cfg_wandb.get("name"),
-            config=config,
-        )
-    except ImportError:
-        print("wandb not installed, skipping logging")
-
+    run = wandb.init(
+        project=cfg_wandb.get("project", "deep-mca-pretrain"),
+        entity=cfg_wandb.get("entity"),
+        name=cfg_wandb.get("name"),
+        config=config,
+    )
+    
     # -- data --
     tokenizer = TextAssemblyLMTokenizer()
 
@@ -204,10 +195,10 @@ def train(config: dict) -> None:
         lr=float(cfg_train["lr"]),
         weight_decay=float(cfg_train["weight_decay"]),
     )
-
-    max_steps = cfg_train["max_steps"]
-    warmup_steps = int(max_steps * float(cfg_train["warmup_ratio"]))
-    scheduler = build_scheduler(optimizer, warmup_steps, max_steps)
+    epochs = int(cfg_train["epochs"])
+    total_steps = len(loader) * epochs
+    warmup_steps = int(total_steps * float(cfg_train["warmup_ratio"]))
+    scheduler = build_scheduler(optimizer, warmup_steps, total_steps)
 
     grad_clip = float(cfg_train["grad_clip"])
     log_interval = cfg_train["log_interval"]
@@ -219,12 +210,14 @@ def train(config: dict) -> None:
     use_amp = device.type == "cuda"
     model.train()
     global_step = 0
+    best_eval_loss = float("inf")
 
-    # Iterate until max_steps (looped as needed)
-    while global_step < max_steps:
+    # For finite number of epochs instead of steps
+    for epoch in range(epochs):
+        model.train()
+        epoch_loss = 0.0
+        epoch_n = 0
         for batch in loader:
-            if global_step >= max_steps:
-                break
 
             input_ids = batch["input_ids"].to(device)
             labels = batch["labels"].to(device)
@@ -235,17 +228,21 @@ def train(config: dict) -> None:
             with torch.amp.autocast("cuda", enabled=use_amp, dtype=torch.bfloat16):
                 out = model(input_ids=input_ids, attention_mask=attention_mask, labels=labels)
                 loss = out.loss
-
+            
             loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), grad_clip)
             optimizer.step()
             scheduler.step()
 
+            n_tokens = (labels != -100).sum().item()
+            epoch_loss += loss.item() * n_tokens
+            epoch_n += n_tokens
             global_step += 1
 
+            # Print base metrics for each log interval step
             if global_step % log_interval == 0:
                 lr = scheduler.get_last_lr()[0]
-                msg = f"step {global_step}/{max_steps}: loss={loss.item():.4f} lr={lr:.2e}"
+                msg = f"step {global_step}/{total_steps}: loss={loss.item():.4f} lr={lr:.2e}"
                 print(msg)
                 if run:
                     run.log(
@@ -253,16 +250,30 @@ def train(config: dict) -> None:
                         step=global_step,
                     )
 
-            if eval_loader and eval_interval > 0 and global_step % eval_interval == 0:
-                eval_metrics = evaluate(model, eval_loader, device)
-                print(
-                    f"eval step {global_step}: "
-                    f"loss={eval_metrics['eval/loss']:.4f} "
-                    f"ppl={eval_metrics['eval/ppl']:.2f}"
+        avg_train_loss = epoch_loss / epoch_n
+        print(f"Epoch {epoch + 1}/{epochs} complete. Avg train loss: {avg_train_loss:.4f}")
+
+        # Only run the evaluation if the split is defined in configs
+        if eval_loader:
+            eval_metrics = evaluate(model, eval_loader, device)
+            print(
+                f"Epoch {epoch + 1} eval: "
+                f"loss={eval_metrics['eval/loss']:.4f} "
+                f"ppl={eval_metrics['eval/ppl']:.2f}"
+            )
+            if run:
+                run.log(
+                    {"train/epoch_loss": avg_train_loss, "epoch": epoch + 1, **eval_metrics},
+                    step=global_step,
                 )
 
+            if eval_metrics["eval/loss"] < best_eval_loss:
+                best_eval_loss = eval_metrics["eval/loss"]
+                ckpt_path = ckpt_dir / "best_backbone.pt"
+                torch.save(model.backbone.state_dict(), ckpt_path)
+                print(f"Saved best model to {ckpt_path}")
     # Final save
-    final_path = ckpt_dir / "backbone.pt"
+    final_path = ckpt_dir / "final_backbone.pt"
 
     torch.save(model.backbone.state_dict(), final_path)
     print(f"Pretraining complete. Saved final backbone to {final_path}")
