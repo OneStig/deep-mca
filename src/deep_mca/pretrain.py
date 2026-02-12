@@ -11,12 +11,12 @@ import random
 from pathlib import Path
 
 import torch
+import wandb
 import yaml
 from datasets import load_dataset
 from torch.utils.data import DataLoader, Dataset
 from transformers import MambaConfig, MambaForCausalLM
 
-import wandb
 from deep_mca.data import EOS_ID, PAD_ID, VOCAB_SIZE, CollateLM, hex_to_tokens
 from deep_mca.utils import build_scheduler
 
