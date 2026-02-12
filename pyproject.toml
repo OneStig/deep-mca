@@ -6,8 +6,10 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "datasets>=4.5.0",
+    "huggingface-hub>=0.36.0",
     "polars>=1.37.1",
     "pyyaml>=6.0",
+    "safetensors>=0.7.0",
     "scipy>=1.11.0",
     "tokenizers>=0.22.2",
     "torch>=2.10.0",
@@ -19,6 +21,7 @@ dependencies = [
 
 [project.scripts]
 deep-mca-finetune = "deep_mca.finetune:main"
+deep-mca-predict = "deep_mca.predict:main"
 
 [build-system]
 requires = ["setuptools>=68", "wheel"]

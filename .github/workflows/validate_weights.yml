@@ -1,0 +1,25 @@
+name: Validate Weights
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  validate-weights:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          python-version: "3.12"
+
+      - name: Sync dependencies
+        run: uv sync
+
+      - name: Validate weights match model architecture
+        run: uv run scripts/check_weights.py
