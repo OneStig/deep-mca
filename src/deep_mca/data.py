@@ -6,27 +6,21 @@ import torch
 from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import Dataset
 
-from deep_mca.tokenizer import TextAssemblyTokenizer
-from deep_mca.utils import disassemble_hex
-
+# TODO: Replace this
+# Using a very naive tokenization scheme for now so we can train for now.
 # PAD is just to make tensor rectangular, always start with BOS and end with EOS.
-tokenizer = TextAssemblyTokenizer()
-PAD_ID = tokenizer.vocab["<PAD>"]
-BOS_ID = tokenizer.vocab["<BOS>"]
-EOS_ID = tokenizer.vocab["<EOS>"]
-VOCAB_SIZE = len(tokenizer.vocab) + len(tokenizer.reg_vocab)
+PAD_ID = 0
+BOS_ID = 1
+EOS_ID = 2
+BYTE_OFFSET = 3
+VOCAB_SIZE = 256 + BYTE_OFFSET
 
 
-def hex_to_tokens(hex_str: str):
-    asm_lines = disassemble_hex(hex_str)
-    token_dicts = tokenizer.tokenize_block(asm_lines)
-    # Flatten: [mne_id_1, reg_id_1a, reg_id_1b, mne_id_2, ...]
-    flat = []
-    for d in token_dicts:
-        flat.append(d["mne_id"])
-        flat.extend(d["regs"])
-        flat.extend(d["numerical"])
-    return [BOS_ID] + flat + [EOS_ID]
+def hex_to_tokens(hex_str: str) -> list[int]:
+    """Convert a hex string to a list of token IDs with BOS/EOS."""
+    # remove once we have proper tokenization
+    byte_vals = bytes.fromhex(hex_str)
+    return [BOS_ID] + [b + BYTE_OFFSET for b in byte_vals] + [EOS_ID]
 
 
 class BHiveDataset(Dataset):
