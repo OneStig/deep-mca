@@ -36,7 +36,7 @@ def generate_vocab_pickle(file_pattern, output_file="vocab.pkl"):
         "DISP_32": 22,
     }
 
-    next_id = 23 
+    next_id = 23
     unique_tokens = set()
 
     files = glob.glob(file_pattern)
