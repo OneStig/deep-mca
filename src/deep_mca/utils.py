@@ -33,6 +33,41 @@ def disassemble_hex(hex_str: str, output_intel_syntax: bool = False) -> list[str
     return lines
 
 
+def disassemble_hex_to_block(hex_str: str) -> tuple[str, bool]:
+    """Disassemble hex string into a newline-joined instruction block (AT&T syntax).
+
+    Returns (instruction_block, is_valid).  is_valid is False when llvm-mc
+    emits warnings such as "invalid instruction encoding".
+
+    This is a module-level function suitable for use with multiprocessing.Pool in
+    order to speed up disassembly.
+    """
+    args = []
+    for i in range(0, len(hex_str), 2):
+        byte = hex_str[i : i + 2]
+        args.append("0x" + byte)
+
+    cmd = "echo {} | llvm-mc -disassemble -triple=x86_64 -output-asm-variant=0".format(
+        " ".join(args)
+    )
+    result = subprocess.run(cmd, shell=True, capture_output=True)
+
+    stdout = result.stdout.decode("utf8")
+    stderr = result.stderr.decode("utf8")
+
+    lines = []
+    for line in stdout.splitlines():
+        line = line.strip()
+        if not line or line.startswith("."):
+            continue
+        lines.append(line)
+
+    block = "\n".join(lines)
+    is_valid = "warning" not in stderr and "error" not in stderr
+
+    return (block, is_valid)
+
+
 def wrap_asm(lines: list[str]) -> str:
     """
     Wrap basic block in a label so llvm-mca can parse it.
