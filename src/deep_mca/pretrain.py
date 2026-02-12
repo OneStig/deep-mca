@@ -8,7 +8,6 @@ Usage:
 import argparse
 import math
 import random
-import wandb
 from pathlib import Path
 
 import torch
@@ -17,7 +16,8 @@ from datasets import load_dataset
 from torch.utils.data import DataLoader, Dataset
 from transformers import MambaConfig, MambaForCausalLM
 
-from deep_mca.data import CollateLM, hex_to_tokens, EOS_ID, VOCAB_SIZE, PAD_ID
+import wandb
+from deep_mca.data import EOS_ID, PAD_ID, VOCAB_SIZE, CollateLM, hex_to_tokens
 from deep_mca.utils import build_scheduler
 
 # Text Assembly LM Tokenizer is a stand-in, replace with proper tokenization later
@@ -64,7 +64,6 @@ class HFHexMap(Dataset):
         if not hex_str or not isinstance(hex_str, str):
             return torch.tensor([], dtype=torch.long)
 
-        
         tokens = hex_to_tokens(hex_str)
 
         # Truncate and force EOS
@@ -116,7 +115,7 @@ def train(config: dict) -> None:
 
     set_seed(cfg_train["seed"])
 
-    # -- wandb --        
+    # -- wandb --
 
     run = wandb.init(
         project=cfg_wandb.get("project", "deep-mca-pretrain"),
@@ -204,7 +203,6 @@ def train(config: dict) -> None:
         epoch_loss = 0.0
         epoch_n = 0
         for batch in loader:
-
             input_ids = batch["input_ids"].to(device)
             labels = batch["labels"].to(device)
             attention_mask = batch["attention_mask"].to(device)
@@ -214,7 +212,7 @@ def train(config: dict) -> None:
             with torch.amp.autocast("cuda", enabled=use_amp, dtype=torch.bfloat16):
                 out = model(input_ids=input_ids, attention_mask=attention_mask, labels=labels)
                 loss = out.loss
-            
+
             loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), grad_clip)
             optimizer.step()
