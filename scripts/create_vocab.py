@@ -75,7 +75,6 @@ def generate_vocab_pickle(dataset_names, output_file="vocab.pkl"):
 
 
 if __name__ == "__main__":
-    
     DATASETS = [
         "Arcticbun/hsw_x86",
         "Arcticbun/ivb_x86",
