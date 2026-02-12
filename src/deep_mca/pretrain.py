@@ -17,8 +17,8 @@ from datasets import load_dataset
 from torch.utils.data import DataLoader, Dataset
 from transformers import MambaConfig, MambaForCausalLM
 
-from deep_mca.data import CollateLM, TextAssemblyLMTokenizer
-from deep_mca.utils import build_scheduler, disassemble_hex
+from deep_mca.data import CollateLM, hex_to_tokens, EOS_ID, VOCAB_SIZE, PAD_ID
+from deep_mca.utils import build_scheduler
 
 # Text Assembly LM Tokenizer is a stand-in, replace with proper tokenization later
 
@@ -48,13 +48,11 @@ class HFHexMap(Dataset):
         split: str,
         field: str,
         max_seq_len: int,
-        tokenizer: TextAssemblyLMTokenizer,
     ):
         super().__init__()
         self.ds = load_dataset(dataset_name, split=split, streaming=False)
         self.field = field
         self.max_seq_len = max_seq_len
-        self.tokenizer = tokenizer
 
     def __len__(self) -> int:
         return len(self.ds)
@@ -66,20 +64,12 @@ class HFHexMap(Dataset):
         if not hex_str or not isinstance(hex_str, str):
             return torch.tensor([], dtype=torch.long)
 
-        asm = disassemble_hex(hex_str)
-
-        # Normalize to list[str] of instruction lines
-        asm_lines = [ln.strip() for ln in asm.splitlines() if ln.strip()]
-
-        if not asm_lines:
-            return torch.tensor([], dtype=torch.long)
-
-        # Tokenize assembly
-        tokens = self.tokenizer.encode_block(asm_lines)
+        
+        tokens = hex_to_tokens(hex_str)
 
         # Truncate and force EOS
         if len(tokens) > self.max_seq_len:
-            tokens = tokens[: self.max_seq_len - 1] + [self.tokenizer.eos_id]
+            tokens = tokens[: self.max_seq_len - 1] + [EOS_ID]
 
         return torch.tensor(tokens, dtype=torch.long)
 
@@ -134,23 +124,21 @@ def train(config: dict) -> None:
         name=cfg_wandb.get("name"),
         config=config,
     )
-    
+
     # -- data --
-    tokenizer = TextAssemblyLMTokenizer()
 
     train_ds = HFHexMap(
         dataset_name=cfg_data["dataset"],
         split=cfg_data["split"],
         field=cfg_data["field"],
         max_seq_len=cfg_data["max_seq_len"],
-        tokenizer=tokenizer,
     )
 
     loader = DataLoader(
         train_ds,
         batch_size=cfg_train["batch_size"],
         shuffle=True,
-        collate_fn=CollateLM(tokenizer.pad_id),
+        collate_fn=CollateLM(PAD_ID),
         num_workers=2,
         pin_memory=(device.type == "cuda"),
     )
@@ -165,30 +153,29 @@ def train(config: dict) -> None:
             split=eval_split,
             field=cfg_data["field"],
             max_seq_len=cfg_data["max_seq_len"],
-            tokenizer=tokenizer,
         )
         eval_loader = DataLoader(
             eval_ds,
             batch_size=cfg_train["batch_size"],
             shuffle=False,
-            collate_fn=CollateLM(tokenizer.pad_id),
+            collate_fn=CollateLM(PAD_ID),
             num_workers=2,
             pin_memory=(device.type == "cuda"),
         )
     # Model: MambaForCausalLM
 
     mcfg = MambaConfig(
-        vocab_size=tokenizer.vocab_size,
+        vocab_size=VOCAB_SIZE,
         hidden_size=cfg_model["hidden_size"],
         num_hidden_layers=cfg_model["num_layers"],
         state_size=cfg_model["state_size"],
-        pad_token_id=tokenizer.pad_id,
+        pad_token_id=PAD_ID,
     )
     model = MambaForCausalLM(mcfg).to(device)
 
     param_count = sum(p.numel() for p in model.parameters())
     print(f"LM parameters: {param_count:,}")
-    print(f"VOCAB_SIZE={tokenizer.vocab_size} PAD_ID={tokenizer.pad_id}")
+    print(f"VOCAB_SIZE={VOCAB_SIZE} PAD_ID={PAD_ID}")
 
     optimizer = torch.optim.AdamW(
         model.parameters(),
@@ -202,7 +189,6 @@ def train(config: dict) -> None:
 
     grad_clip = float(cfg_train["grad_clip"])
     log_interval = cfg_train["log_interval"]
-    eval_interval = cfg_train["eval_interval"]
 
     ckpt_dir = Path(cfg_train["checkpoint_dir"])
     ckpt_dir.mkdir(parents=True, exist_ok=True)
