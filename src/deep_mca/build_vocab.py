@@ -1,5 +1,7 @@
 import json
-from datasets import load_dataset, concatenate_datasets
+
+from datasets import concatenate_datasets, load_dataset
+
 from deep_mca.tokenizer import TextAssemblyTokenizer
 
 ds1 = load_dataset("Arcticbun/hsw_x86")
