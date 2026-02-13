@@ -33,7 +33,6 @@ class Tokenizer:
             print(f"ERROR: {pkl_path} not found.")
             exit()
 
-
     # ==========================================
     # 2. PARSING LOGIC
     # ==========================================
@@ -65,7 +64,6 @@ class Tokenizer:
         if -128 <= val <= 127:
             return "DISP_8"
         return "DISP_32"
-
 
     def parse_block_to_ids(self, block_str):
         """
@@ -147,7 +145,6 @@ class Tokenizer:
 
         return token_ids
 
-
     # ==========================================
     # 3. PROCESSING FROM HUGGING FACE
     # ==========================================
@@ -227,51 +224,41 @@ if __name__ == "__main__":
             -s train -i 10
         """
 
-        parser = argparse.ArgumentParser(
-            description="Process Hugging Face datasets"
+        parser = argparse.ArgumentParser(description="Process Hugging Face datasets")
+
+        parser.add_argument(
+            "-p", "--pickle-path", type=str, required=True, help="Pickle vocabulary path"
         )
 
         parser.add_argument(
-            "-p", "--pickle-path",
-            type=str,
-            required=True,
-            help="Pickle vocabulary path"
-        )
-
-        parser.add_argument(
-            "-d", "--dataset-names",
+            "-d",
+            "--dataset-names",
             nargs="+",
             type=str,
             required=True,
-            help="List of HF dataset names"
+            help="List of HF dataset names",
         )
 
         parser.add_argument(
-            "-t", "--text-column",
+            "-t",
+            "--text-column",
             type=str,
             required=True,
-            help="Column containing text/instructions"
+            help="Column containing text/instructions",
         )
 
         parser.add_argument(
-            "-o", "--output-dir",
+            "-o",
+            "--output-dir",
             type=str,
             default="../../data/tokenized_out",
-            help="Output directory"
+            help="Output directory",
         )
 
-        parser.add_argument(
-            "-s", "--split",
-            type=str,
-            default="train",
-            help="Dataset split"
-        )
+        parser.add_argument("-s", "--split", type=str, default="train", help="Dataset split")
 
         parser.add_argument(
-            "-i", "--sample-index",
-            type=int,
-            default=5,
-            help="Sample index for debugging"
+            "-i", "--sample-index", type=int, default=5, help="Sample index for debugging"
         )
 
         return parser
@@ -286,4 +273,4 @@ if __name__ == "__main__":
         split=args.split,
         output_dir=args.output_dir,
         sample_index=args.sample_index,
-    )    
+    )
