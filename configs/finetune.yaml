@@ -6,7 +6,8 @@ model:
   pretrained_path: null
 
 data:
-  bhive_csv: data/bhive/benchmark/throughput/skl.csv
+  dataset: Arcticbun/skl_x86
+  vocab_path: data/vocab.pkl
   max_seq_len: 512
   train_ratio: 0.8
 

@@ -1,55 +1,37 @@
-import csv
 import math
-from pathlib import Path
 
 import torch
+from datasets import load_dataset
 from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import Dataset
 
-# TODO: Replace this
-# Using a very naive tokenization scheme for now so we can train for now.
-# PAD is just to make tensor rectangular, always start with BOS and end with EOS.
-PAD_ID = 0
-BOS_ID = 1
-EOS_ID = 2
-BYTE_OFFSET = 3
-VOCAB_SIZE = 256 + BYTE_OFFSET
-
-
-def hex_to_tokens(hex_str: str) -> list[int]:
-    """Convert a hex string to a list of token IDs with BOS/EOS."""
-    # remove once we have proper tokenization
-    byte_vals = bytes.fromhex(hex_str)
-    return [BOS_ID] + [b + BYTE_OFFSET for b in byte_vals] + [EOS_ID]
+from deep_mca.tokenizer import Tokenizer
 
 
 class BHiveDataset(Dataset):
-    """Dataset for bhive throughput data with naive tokenization."""
+    """Dataset for bhive throughput data, pre-disassembled."""
 
     def __init__(
         self,
-        csv_path: str | Path,
+        dataset_name: str,
+        tokenizer: Tokenizer,
         max_seq_len: int = 512,
         split: str = "train",
         train_ratio: float = 0.8,
         seed: int = 42,
         log_targets: bool = True,
+        text_column: str = "instructions",
+        target_column: str = "cycles",
     ):
-        csv_path = Path(csv_path)
+        ds = load_dataset(dataset_name, split="train")
         samples: list[tuple[str, float]] = []
-        with open(csv_path) as f:
-            reader = csv.reader(f)
-            for row in reader:
-                hex_str, throughput = row[0], float(row[1])
-                if not hex_str:
-                    continue
-                # +2 for BOS/EOS
-                if len(hex_str) // 2 + 2 > max_seq_len:
-                    continue
-                samples.append((hex_str, throughput))
+        for row in ds:
+            text = row.get(text_column)
+            target = row.get(target_column)
+            if not text or not isinstance(text, str) or target is None:
+                continue
+            samples.append((text, float(target)))
 
-        # Deterministic shuffle and split
-        # TODO: Later we should just use canonical split? @henry
         gen = torch.Generator().manual_seed(seed)
         indices = torch.randperm(len(samples), generator=gen).tolist()
         split_idx = int(len(indices) * train_ratio)
@@ -61,8 +43,10 @@ class BHiveDataset(Dataset):
 
         self.items: list[tuple[list[int], float]] = []
         for i in selected:
-            hex_str, throughput = samples[i]
-            tokens = hex_to_tokens(hex_str)
+            text, throughput = samples[i]
+            tokens = tokenizer.parse_block_to_ids(text)
+            if len(tokens) == 0 or len(tokens) > max_seq_len:
+                continue
             target = math.log(throughput) if log_targets else throughput
             self.items.append((tokens, target))
 
@@ -79,7 +63,7 @@ def collate_fn(
 ) -> dict[str, torch.Tensor]:
     """Pad sequences and return input_ids, lengths, and targets."""
     token_seqs, lengths, targets = zip(*batch, strict=True)
-    input_ids = pad_sequence(list(token_seqs), batch_first=True, padding_value=PAD_ID)
+    input_ids = pad_sequence(list(token_seqs), batch_first=True, padding_value=0)
     return {
         "input_ids": input_ids,
         "lengths": torch.tensor(lengths, dtype=torch.long),

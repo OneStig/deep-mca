@@ -1,4 +1,3 @@
-import argparse
 import pickle
 import re
 from pathlib import Path
@@ -10,6 +9,11 @@ from tqdm import tqdm  # pip install tqdm (>=4.67.3)
 class Tokenizer:
     def __init__(self, pkl_path):
         self.vocab = self.load_vocab(pkl_path)
+        self.pad_id = self.vocab.get("<PAD>", 0)
+
+    @property
+    def vocab_size(self) -> int:
+        return max(self.vocab.values()) + 1
 
     # ==========================================
     # 1. LOAD self.vocabULARY

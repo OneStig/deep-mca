@@ -16,6 +16,7 @@ from torch.utils.data import DataLoader
 
 from deep_mca.data import BHiveDataset, collate_fn
 from deep_mca.model import MambaRegressor
+from deep_mca.tokenizer import Tokenizer
 
 
 def load_config(path: str) -> dict:
@@ -109,17 +110,21 @@ def train(config: dict) -> None:
     except ImportError:
         print("wandb not installed, skipping logging")
 
+    tokenizer = Tokenizer(cfg_data["vocab_path"])
+
     # -- data --
     log_targets = cfg_data.get("log_targets", True)
     train_ds = BHiveDataset(
-        cfg_data["bhive_csv"],
+        cfg_data["dataset"],
+        tokenizer=tokenizer,
         max_seq_len=cfg_data["max_seq_len"],
         split="train",
         train_ratio=cfg_data["train_ratio"],
         log_targets=log_targets,
     )
     eval_ds = BHiveDataset(
-        cfg_data["bhive_csv"],
+        cfg_data["dataset"],
+        tokenizer=tokenizer,
         max_seq_len=cfg_data["max_seq_len"],
         split="eval",
         train_ratio=cfg_data["train_ratio"],
@@ -151,6 +156,8 @@ def train(config: dict) -> None:
         print(f"Loading pretrained backbone from {pretrained_path}")
         model = MambaRegressor.from_pretrained_backbone(
             pretrained_path,
+            vocab_size=tokenizer.vocab_size,
+            pad_id=tokenizer.pad_id,
             hidden_size=cfg_model["hidden_size"],
             num_layers=cfg_model["num_layers"],
             state_size=cfg_model["state_size"],
@@ -158,6 +165,8 @@ def train(config: dict) -> None:
         )
     else:
         model = MambaRegressor(
+            vocab_size=tokenizer.vocab_size,
+            pad_id=tokenizer.pad_id,
             hidden_size=cfg_model["hidden_size"],
             num_layers=cfg_model["num_layers"],
             state_size=cfg_model["state_size"],

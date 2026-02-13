@@ -5,14 +5,14 @@ import torch.nn as nn
 from safetensors.torch import load_file
 from transformers import MambaConfig, MambaModel
 
-from deep_mca.data import PAD_ID, VOCAB_SIZE
-
 
 class MambaRegressor(nn.Module):
     """Mamba backbone with a linear regression head for throughput prediction."""
 
     def __init__(
         self,
+        vocab_size: int,
+        pad_id: int = 0,
         hidden_size: int = 256,
         num_layers: int = 4,
         state_size: int = 16,
@@ -20,11 +20,11 @@ class MambaRegressor(nn.Module):
     ):
         super().__init__()
         config = MambaConfig(
-            vocab_size=VOCAB_SIZE,
+            vocab_size=vocab_size,
             hidden_size=hidden_size,
             num_hidden_layers=num_layers,
             state_size=state_size,
-            pad_token_id=PAD_ID,
+            pad_token_id=pad_id,
         )
         self.backbone = MambaModel(config)
         self.head = nn.Sequential(
@@ -57,6 +57,8 @@ class MambaRegressor(nn.Module):
     def from_pretrained_backbone(
         cls,
         pretrained_path: str | Path,
+        vocab_size: int,
+        pad_id: int = 0,
         hidden_size: int = 256,
         num_layers: int = 4,
         state_size: int = 16,
@@ -64,6 +66,8 @@ class MambaRegressor(nn.Module):
     ) -> "MambaRegressor":
         """Load pretrained backbone weights, initialise regression head fresh."""
         model = cls(
+            vocab_size=vocab_size,
+            pad_id=pad_id,
             hidden_size=hidden_size,
             num_layers=num_layers,
             state_size=state_size,
