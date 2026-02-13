@@ -32,7 +32,7 @@ uv run deep-mca-finetune --config configs/finetune.yaml
 ## Data
 
 - Pretraining corpus: [stevenhe04/x86-bb-24m](https://huggingface.co/datasets/stevenhe04/x86-bb-24m)
-- Pretraining assembly dataset: [henryc13/x86-pretrain] (https://huggingface.co/datasets/henryc13/x86-pretrain)
+- Pretraining assembly dataset: [henryc13/x86-pretrain](https://huggingface.co/datasets/henryc13/x86-pretrain)
 
 ## References
 
