@@ -34,13 +34,8 @@ def disassemble_hex(hex_str: str, output_intel_syntax: bool = False) -> list[str
 
 
 def disassemble_hex_to_block(hex_str: str) -> tuple[str, bool]:
-    """Disassemble hex string into a newline-joined instruction block (AT&T syntax).
-
-    Returns (instruction_block, is_valid).  is_valid is False when llvm-mc
-    emits warnings such as "invalid instruction encoding".
-
-    This is a module-level function suitable for use with multiprocessing.Pool in
-    order to speed up disassembly.
+    """
+    Disassembly function for multiprocessing and tracking block validity.
     """
     args = []
     for i in range(0, len(hex_str), 2):
