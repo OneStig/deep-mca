@@ -26,6 +26,8 @@ def load_from_hub(
         config = json.load(f)
 
     model = MambaRegressor(
+        vocab_size=config["vocab_size"],
+        pad_id=config.get("pad_id", 0),
         hidden_size=config["hidden_size"],
         num_layers=config["num_layers"],
         state_size=config["state_size"],

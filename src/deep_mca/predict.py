@@ -3,30 +3,30 @@ import math
 import torch
 import typer
 
-from deep_mca.data import hex_to_tokens
 from deep_mca.hub import load_from_hub
 from deep_mca.model import MambaRegressor
+from deep_mca.tokenizer import Tokenizer
 
 _model_cache: dict[tuple[str, str], MambaRegressor] = {}
-
-
-def _get_model(repo_id: str, arch: str) -> MambaRegressor:
-    key = (repo_id, arch)
-    if key not in _model_cache:
-        _model_cache[key] = load_from_hub(repo_id=repo_id, arch=arch)
-    return _model_cache[key]
+_tokenizer_cache: dict[str, Tokenizer] = {}
 
 
 def predict(
-    hex_str: str,
+    assembly: str,
+    vocab_path: str,
     arch: str = "skylake",
     repo_id: str = "stevenhe04/deep-mca",
 ) -> float:
-    model = _get_model(repo_id, arch)
+    if vocab_path not in _tokenizer_cache:
+        _tokenizer_cache[vocab_path] = Tokenizer(vocab_path)
+    tokenizer = _tokenizer_cache[vocab_path]
 
-    # For now just input the hex, but once we finish tokenization
-    # should just input assembly directly @teddy @huy
-    tokens = hex_to_tokens(hex_str)
+    model_key = (repo_id, arch)
+    if model_key not in _model_cache:
+        _model_cache[model_key] = load_from_hub(repo_id=repo_id, arch=arch)
+    model = _model_cache[model_key]
+
+    tokens = tokenizer.parse_block_to_ids(assembly)
     input_ids = torch.tensor([tokens], dtype=torch.long)
     lengths = torch.tensor([len(tokens)], dtype=torch.long)
 
@@ -41,10 +41,11 @@ app = typer.Typer()
 
 @app.command()
 def cli(
-    hex_str: str = typer.Option(..., "--hex"),
+    assembly: str = typer.Option(..., "--asm"),
+    vocab_path: str = typer.Option(..., "--vocab"),
     arch: str = typer.Option("skylake", "--arch"),
 ) -> None:
-    cycles = predict(hex_str, arch=arch)
+    cycles = predict(assembly, vocab_path=vocab_path, arch=arch)
     print(f"{cycles:.2f}")
 
 
