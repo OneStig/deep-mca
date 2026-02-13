@@ -18,49 +18,23 @@ def disassemble(hex_str: str, output_intel_syntax: bool = False) -> str:
         " ".join(args),
         syntax_id,
     )
-    stdout = subprocess.check_output(cmd, shell=True)
-    return stdout.decode("utf8")
-
-
-def disassemble_hex(hex_str: str, output_intel_syntax: bool = False) -> list[str]:
-    output = disassemble(hex_str, output_intel_syntax=output_intel_syntax)
-    lines = []
-    for line in output.splitlines():
-        line = line.strip()
-        if not line or line.startswith("."):
-            continue
-        lines.append(line)
-    return lines
-
-
-def disassemble_hex_to_block(hex_str: str) -> tuple[str, bool]:
-    """
-    Disassembly function for multiprocessing and tracking block validity.
-    """
-    args = []
-    for i in range(0, len(hex_str), 2):
-        byte = hex_str[i : i + 2]
-        args.append("0x" + byte)
-
-    cmd = "echo {} | llvm-mc -disassemble -triple=x86_64 -output-asm-variant=0".format(
-        " ".join(args)
-    )
     result = subprocess.run(cmd, shell=True, capture_output=True)
+    return result.stdout.decode("utf8"), result.stderr.decode("utf8")
 
-    stdout = result.stdout.decode("utf8")
-    stderr = result.stderr.decode("utf8")
 
+def disassemble_hex(hex_str: str, output_intel_syntax: bool = False, validate: bool = False) -> list[str]:
+    stdout, stderr = disassemble(hex_str, output_intel_syntax=output_intel_syntax)
     lines = []
     for line in stdout.splitlines():
         line = line.strip()
         if not line or line.startswith("."):
             continue
         lines.append(line)
-
-    block = "\n".join(lines)
-    is_valid = "warning" not in stderr and "error" not in stderr
-
-    return (block, is_valid)
+    if validate:
+        block = "\n".join(lines)
+        is_valid = "warning" not in stderr and "error" not in stderr
+        return (block, is_valid)
+    return lines
 
 
 def wrap_asm(lines: list[str]) -> str:
