@@ -22,7 +22,9 @@ def disassemble(hex_str: str, output_intel_syntax: bool = False) -> str:
     return result.stdout.decode("utf8"), result.stderr.decode("utf8")
 
 
-def disassemble_hex(hex_str: str, output_intel_syntax: bool = False, validate: bool = False) -> list[str]:
+def disassemble_hex(
+    hex_str: str, output_intel_syntax: bool = False, validate: bool = False
+) -> list[str]:
     stdout, stderr = disassemble(hex_str, output_intel_syntax=output_intel_syntax)
     lines = []
     for line in stdout.splitlines():
