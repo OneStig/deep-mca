@@ -5,8 +5,8 @@ from pathlib import Path
 import yaml
 from huggingface_hub import hf_hub_download
 
-from deep_mca.data import VOCAB_SIZE
 from deep_mca.hub import load_from_hub
+from deep_mca.tokenizer import Tokenizer
 
 REPO = "stevenhe04/deep-mca"
 ARCH = "skylake"
@@ -15,14 +15,17 @@ ARCH = "skylake"
 def main() -> None:
     config_yaml = Path("configs/finetune.yaml")
     with open(config_yaml) as f:
-        local_cfg = yaml.safe_load(f)["model"]
+        cfg = yaml.safe_load(f)
+    local_cfg = cfg["model"]
+
+    tokenizer = Tokenizer(cfg["data"]["vocab_path"])
 
     expected = {
         "hidden_size": local_cfg["hidden_size"],
         "num_layers": local_cfg["num_layers"],
         "state_size": local_cfg["state_size"],
         "dropout": local_cfg["dropout"],
-        "vocab_size": VOCAB_SIZE,
+        "vocab_size": tokenizer.vocab_size,
     }
 
     remote_config_path = hf_hub_download(repo_id=REPO, filename=f"{ARCH}/config.json")

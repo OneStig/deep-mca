@@ -12,7 +12,7 @@ import yaml
 from huggingface_hub import HfApi
 from safetensors.torch import load_file, save_file
 
-from deep_mca.data import VOCAB_SIZE
+from deep_mca.tokenizer import Tokenizer
 
 REPO = "stevenhe04/deep-mca"
 
@@ -39,6 +39,8 @@ def main() -> None:
         cfg = yaml.safe_load(f)
     model_cfg = cfg["model"]
 
+    tokenizer = Tokenizer(cfg["data"]["vocab_path"])
+
     tmp_dir = tempfile.mkdtemp()
     try:
         state_dict = load_file(args.checkpoint)
@@ -49,7 +51,7 @@ def main() -> None:
             "num_layers": model_cfg["num_layers"],
             "state_size": model_cfg["state_size"],
             "dropout": model_cfg["dropout"],
-            "vocab_size": VOCAB_SIZE,
+            "vocab_size": tokenizer.vocab_size,
         }
         with open(Path(tmp_dir) / "config.json", "w") as f:
             json.dump(config, f, indent=2)
