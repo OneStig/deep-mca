@@ -5,7 +5,6 @@ uv run deep-mca-finetune --config configs/finetune.yaml
 """
 
 import argparse
-import math
 from pathlib import Path
 
 import torch
@@ -17,27 +16,12 @@ from torch.utils.data import DataLoader
 from deep_mca.data import BHiveDataset, collate_fn
 from deep_mca.model import MambaRegressor
 from deep_mca.tokenizer import Tokenizer
+from deep_mca.utils import build_scheduler
 
 
 def load_config(path: str) -> dict:
     with open(path) as f:
         return yaml.safe_load(f)
-
-
-def build_scheduler(
-    optimizer: torch.optim.Optimizer,
-    warmup_steps: int,
-    total_steps: int,
-) -> torch.optim.lr_scheduler.LambdaLR:
-    """Linear warmup then cosine decay to 0"""
-
-    def lr_lambda(step: int) -> float:
-        if step < warmup_steps:
-            return step / max(warmup_steps, 1)
-        progress = (step - warmup_steps) / max(total_steps - warmup_steps, 1)
-        return 0.5 * (1.0 + math.cos(math.pi * progress))
-
-    return torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda)
 
 
 @torch.no_grad()

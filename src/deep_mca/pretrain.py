@@ -11,15 +11,15 @@ import random
 from pathlib import Path
 
 import torch
+import wandb
 import yaml
 from datasets import load_dataset
 from torch.utils.data import DataLoader, Dataset
 from transformers import MambaConfig, MambaForCausalLM
 
-import wandb
 from deep_mca.data import CollateLM
-from deep_mca.tokenizer import Tokenizer
 from deep_mca.utils import build_scheduler
+from deep_mca.tokenizer import Tokenizer
 
 
 def load_config(path: str | Path) -> dict:
@@ -63,10 +63,10 @@ class HFAssemblyDataset(Dataset):
     def __getitem__(self, idx: int) -> torch.Tensor:
         ex = self.ds[idx]
 
-        # Skip invalid rows
+        # Skip invalid rows 
         if not ex.get("valid", True):
             return torch.tensor([], dtype=torch.long)
-
+        
         text = ex.get(self.field)
         if not text or not isinstance(text, str):
             return torch.tensor([], dtype=torch.long)
