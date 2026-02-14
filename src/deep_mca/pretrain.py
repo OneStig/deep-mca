@@ -62,7 +62,7 @@ class HFAssemblyDataset(Dataset):
 
     def __getitem__(self, idx: int) -> torch.Tensor:
         ex = self.ds[idx]
-        
+
         text = ex.get(self.field)
         if not text or not isinstance(text, str):
             return torch.tensor([], dtype=torch.long)
