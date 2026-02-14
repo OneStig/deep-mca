@@ -11,15 +11,15 @@ import random
 from pathlib import Path
 
 import torch
-import wandb
 import yaml
 from datasets import load_dataset
 from torch.utils.data import DataLoader, Dataset
 from transformers import MambaConfig, MambaForCausalLM
 
+import wandb
 from deep_mca.data import CollateLM
-from deep_mca.utils import build_scheduler
 from deep_mca.tokenizer import Tokenizer
+from deep_mca.utils import build_scheduler
 
 
 def load_config(path: str | Path) -> dict:
