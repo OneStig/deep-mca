@@ -62,10 +62,6 @@ class HFAssemblyDataset(Dataset):
 
     def __getitem__(self, idx: int) -> torch.Tensor:
         ex = self.ds[idx]
-
-        # Skip invalid rows 
-        if not ex.get("valid", True):
-            return torch.tensor([], dtype=torch.long)
         
         text = ex.get(self.field)
         if not text or not isinstance(text, str):

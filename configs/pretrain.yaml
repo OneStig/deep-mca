@@ -11,7 +11,7 @@ data:
   max_seq_len: 256
   
   #can toggle on/off to enable eval during pretraining 
-  eval_split: [99%:]
+  eval_split: train[99%:]
 
 training:
   seed: 42
