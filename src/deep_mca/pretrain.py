@@ -1,5 +1,5 @@
 """
-Pretraining (causal LM) on unlabeled x86 basic block hex corpus.
+Pretraining (causal LM) on unlabeled x86 basic block corpus.
 
 Usage:
   uv run deep-mca-pretrain --config configs/pretrain.yaml
@@ -11,16 +11,15 @@ import random
 from pathlib import Path
 
 import torch
-import wandb
 import yaml
 from datasets import load_dataset
 from torch.utils.data import DataLoader, Dataset
 from transformers import MambaConfig, MambaForCausalLM
 
-from deep_mca.data import EOS_ID, PAD_ID, VOCAB_SIZE, CollateLM, hex_to_tokens
+import wandb
+from deep_mca.data import CollateLM
+from deep_mca.tokenizer import Tokenizer
 from deep_mca.utils import build_scheduler
-
-# Text Assembly LM Tokenizer is a stand-in, replace with proper tokenization later
 
 
 def load_config(path: str | Path) -> dict:
@@ -34,7 +33,7 @@ def set_seed(seed: int) -> None:
     torch.cuda.manual_seed_all(seed)
 
 
-class HFHexMap(Dataset):
+class HFAssemblyDataset(Dataset):
     """
     Hugging Face dataset.
 
@@ -47,28 +46,36 @@ class HFHexMap(Dataset):
         dataset_name: str,
         split: str,
         field: str,
+        tokenizer: Tokenizer,
         max_seq_len: int,
     ):
         super().__init__()
         self.ds = load_dataset(dataset_name, split=split, streaming=False)
         self.field = field
+        self.tokenizer = tokenizer
         self.max_seq_len = max_seq_len
+        self.eos_id = tokenizer.vocab.get("<EOS>")
+        self.pad_id = tokenizer.pad_id
 
     def __len__(self) -> int:
         return len(self.ds)
 
     def __getitem__(self, idx: int) -> torch.Tensor:
         ex = self.ds[idx]
-        hex_str = ex.get(self.field)
 
-        if not hex_str or not isinstance(hex_str, str):
+        # Skip invalid rows
+        if not ex.get("valid", True):
             return torch.tensor([], dtype=torch.long)
 
-        tokens = hex_to_tokens(hex_str)
+        text = ex.get(self.field)
+        if not text or not isinstance(text, str):
+            return torch.tensor([], dtype=torch.long)
+
+        tokens = self.tokenizer.parse_block_to_ids(text)
 
         # Truncate and force EOS
         if len(tokens) > self.max_seq_len:
-            tokens = tokens[: self.max_seq_len - 1] + [EOS_ID]
+            tokens = tokens[: self.max_seq_len - 1] + [self.eos_id]
 
         return torch.tensor(tokens, dtype=torch.long)
 
@@ -115,6 +122,11 @@ def train(config: dict) -> None:
 
     set_seed(cfg_train["seed"])
 
+    # -- tokenizer --
+    tokenizer = Tokenizer(cfg_data["vocab_path"])
+    PAD_ID = tokenizer.pad_id
+    VOCAB_SIZE = tokenizer.vocab_size
+
     # -- wandb --
 
     run = wandb.init(
@@ -126,10 +138,11 @@ def train(config: dict) -> None:
 
     # -- data --
 
-    train_ds = HFHexMap(
+    train_ds = HFAssemblyDataset(
         dataset_name=cfg_data["dataset"],
         split=cfg_data["split"],
         field=cfg_data["field"],
+        tokenizer=tokenizer,
         max_seq_len=cfg_data["max_seq_len"],
     )
 
@@ -147,10 +160,11 @@ def train(config: dict) -> None:
 
     # can toggle in pretrain.yaml
     if eval_split:
-        eval_ds = HFHexMap(
+        eval_ds = HFAssemblyDataset(
             dataset_name=cfg_data["dataset"],
             split=eval_split,
             field=cfg_data["field"],
+            tokenizer=tokenizer,
             max_seq_len=cfg_data["max_seq_len"],
         )
         eval_loader = DataLoader(

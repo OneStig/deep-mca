@@ -4,13 +4,14 @@ model:
   state_size: 16
 
 data:
-  dataset: stevenhe04/x86-bb-24m
-  split: train
-  field: hex
+  dataset: henryc13/x86-pretrain
+  split: train[:99%]
+  field: instructions
+  vocab_path: data/vocab.pkl
   max_seq_len: 256
   
   #can toggle on/off to enable eval during pretraining 
-  eval_split: null
+  eval_split: [99%:]
 
 training:
   seed: 42
