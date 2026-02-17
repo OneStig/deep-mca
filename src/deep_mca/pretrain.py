@@ -14,6 +14,7 @@ import torch
 import wandb
 import yaml
 from datasets import load_dataset
+from safetensors.torch import save_file
 from torch.utils.data import DataLoader, Dataset
 from transformers import MambaConfig, MambaForCausalLM
 
@@ -263,13 +264,13 @@ def train(config: dict) -> None:
 
             if eval_metrics["eval/loss"] < best_eval_loss:
                 best_eval_loss = eval_metrics["eval/loss"]
-                ckpt_path = ckpt_dir / "best_backbone.pt"
-                torch.save(model.backbone.state_dict(), ckpt_path)
+                ckpt_path = ckpt_dir / "best_backbone.safetensors"
+                save_file(model.backbone.state_dict(), ckpt_path)
                 print(f"Saved best model to {ckpt_path}")
     # Final save
-    final_path = ckpt_dir / "final_backbone.pt"
+    final_path = ckpt_dir / "final_backbone.safetensors"
 
-    torch.save(model.backbone.state_dict(), final_path)
+    save_file(model.backbone.state_dict(), final_path)
     print(f"Pretraining complete. Saved final backbone to {final_path}")
 
     if run:
